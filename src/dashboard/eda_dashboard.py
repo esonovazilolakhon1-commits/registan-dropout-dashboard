@@ -1002,8 +1002,6 @@ elif page == "Predictions":
             )
         else:
             pred['studentName'] = pred['studentId']
-        if 'phoneNumber' not in pred.columns:
-            pred['phoneNumber'] = ''
         # I pull teacher and moderator names from master_full because the
         # predictions file only stores IDs. The moderator needs names to know
         # which colleague to contact if a student is flagged as high risk.
@@ -1037,8 +1035,7 @@ elif page == "Predictions":
         def _reset_pred_filters():
             for k in ['p_risk', 'p_course', 'p_mod']:
                 st.session_state[k] = 'All'
-            for k in ['p_name', 'p_phone']:
-                st.session_state[k] = None
+            st.session_state['p_name'] = None
 
         st.button("↺ Reset filters", on_click=_reset_pred_filters, key='pred_reset')
 
@@ -1052,18 +1049,14 @@ elif page == "Predictions":
         sel_pcourse = f2.selectbox("Course",                  course_opts, key='p_course')
         sel_mod     = f3.selectbox("My students (moderator)", mod_opts,    key='p_mod')
 
-        s1, s2 = st.columns(2)
-        name_opts  = sorted(pred['studentName'].dropna().unique().tolist())
-        phone_opts = sorted(pred['phoneNumber'].dropna().astype(str).unique().tolist())
-        search_name  = s1.selectbox("Search by student name",  name_opts,  key='p_name',  index=None, placeholder="Type a name...")
-        search_phone = s2.selectbox("Search by phone number",  phone_opts, key='p_phone', index=None, placeholder="Type a phone number...")
+        name_opts   = sorted(pred['studentName'].dropna().unique().tolist())
+        search_name = st.selectbox("Search by student name", name_opts, key='p_name', index=None, placeholder="Type a name...")
 
         view = pred.copy()
         if sel_risk    != 'All':  view = view[view['risk_level']        == sel_risk]
         if sel_pcourse != 'All':  view = view[view['courseName']        == sel_pcourse]
         if sel_mod     != 'All':  view = view[view['lastModeratorName'] == sel_mod]
-        if search_name  is not None: view = view[view['studentName']               == search_name]
-        if search_phone is not None: view = view[view['phoneNumber'].astype(str)   == search_phone]
+        if search_name  is not None: view = view[view['studentName']    == search_name]
 
         st.caption(f"Showing {len(view):,} of {len(pred):,} active students")
 
@@ -1079,10 +1072,10 @@ elif page == "Predictions":
 
         # ---- ranked, colour-coded table ----------------------
         table = view.sort_values('dropout_probability', ascending=False)[[
-            'studentName', 'phoneNumber', 'courseName', 'dropout_probability', 'risk_level',
+            'studentName', 'courseName', 'dropout_probability', 'risk_level',
             'topFactors', 'lastTeacherName', 'lastModeratorName'
         ]].rename(columns={
-            'studentName': 'Student', 'phoneNumber': 'Phone',
+            'studentName': 'Student',
             'courseName': 'Course',
             'dropout_probability': 'Risk %', 'risk_level': 'Risk',
             'topFactors': 'Top Factors',
@@ -1165,9 +1158,6 @@ elif page == "Live Predictions":
             pred['studentName']       = pred.get('studentName',       pd.Series('Unknown', index=pred.index)).fillna('Unknown')
             pred['lastTeacherName']   = pred.get('lastTeacherName',   pd.Series('Unknown', index=pred.index)).fillna('Unknown')
             pred['lastModeratorName'] = pred.get('lastModeratorName', pd.Series('Unknown', index=pred.index)).fillna('Unknown')
-            if 'phoneNumber' not in pred.columns:
-                pred['phoneNumber'] = ''
-            pred['phoneNumber'] = pred['phoneNumber'].fillna('').astype(str).replace('None', '')
             return pred
 
         live = load_live_predictions()
@@ -1190,8 +1180,7 @@ elif page == "Live Predictions":
         def _reset_live_filters():
             for k in ['lv_risk', 'lv_course', 'lv_mod']:
                 st.session_state[k] = 'All'
-            for k in ['lv_name', 'lv_phone']:
-                st.session_state[k] = None
+            st.session_state['lv_name'] = None
 
         st.button("↺ Reset filters", on_click=_reset_live_filters, key='live_reset')
 
@@ -1205,18 +1194,14 @@ elif page == "Live Predictions":
         sel_course  = f2.selectbox("Course",                  course_opts, key='lv_course')
         sel_mod     = f3.selectbox("My students (moderator)", mod_opts,    key='lv_mod')
 
-        s1, s2 = st.columns(2)
-        name_opts  = sorted(live['studentName'].dropna().unique().tolist())
-        phone_opts = sorted(live['phoneNumber'].dropna().astype(str).unique().tolist())
-        sel_name   = s1.selectbox("Search by student name",  name_opts,  key='lv_name',  index=None, placeholder="Type a name...")
-        sel_phone  = s2.selectbox("Search by phone number",  phone_opts, key='lv_phone', index=None, placeholder="Type a phone number...")
+        name_opts = sorted(live['studentName'].dropna().unique().tolist())
+        sel_name  = st.selectbox("Search by student name", name_opts, key='lv_name', index=None, placeholder="Type a name...")
 
         view = live.copy()
         if sel_risk   != 'All': view = view[view['risk_level']        == sel_risk]
         if sel_course != 'All': view = view[view['courseName']        == sel_course]
         if sel_mod    != 'All': view = view[view['lastModeratorName'] == sel_mod]
-        if sel_name   is not None: view = view[view['studentName']              == sel_name]
-        if sel_phone  is not None: view = view[view['phoneNumber'].astype(str)  == sel_phone]
+        if sel_name   is not None: view = view[view['studentName']    == sel_name]
 
         st.caption(f"Showing {len(view):,} of {len(live):,} active students")
 
@@ -1240,11 +1225,11 @@ elif page == "Live Predictions":
             }.get(val, '')
 
         table = view.sort_values('dropout_probability', ascending=False)[[
-            'studentName', 'phoneNumber', 'courseName',
+            'studentName', 'courseName',
             'dropout_probability', 'risk_level', 'topFactors',
             'lastTeacherName', 'lastModeratorName'
         ]].rename(columns={
-            'studentName': 'Student', 'phoneNumber': 'Phone',
+            'studentName': 'Student',
             'courseName': 'Course', 'dropout_probability': 'Risk %',
             'risk_level': 'Risk', 'topFactors': 'Top Factors',
             'lastTeacherName': 'Teacher', 'lastModeratorName': 'Moderator'
