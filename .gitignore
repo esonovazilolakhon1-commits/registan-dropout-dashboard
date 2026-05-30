@@ -27,6 +27,7 @@ data/processed/*
 !data/processed/snap_train.parquet
 !data/processed/snap_score.parquet
 !data/processed/live_predictions.parquet
+!data/processed/student_names.parquet
 
 # models - only commit the production model and comparison models
 models/*
