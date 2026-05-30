@@ -30,14 +30,15 @@ print("=" * 60)
 print("MERGE USERS — live + historical")
 print("=" * 60)
 
-# ── Step 1: load original cleaned users (always available) ───────────────────
+# ── Step 1: load original cleaned users (if available) ───────────────────────
 print(f"\nLoading original users from: {ORIGINAL_INTERIM}")
-if not ORIGINAL_INTERIM.exists():
-    print("  ✗  Original users.parquet not found — cannot continue.")
-    sys.exit(1)
-
-base_df = pd.read_parquet(ORIGINAL_INTERIM)
-print(f"  → {len(base_df):,} historical users loaded")
+if ORIGINAL_INTERIM.exists():
+    base_df = pd.read_parquet(ORIGINAL_INTERIM)
+    print(f"  → {len(base_df):,} historical users loaded")
+else:
+    print("  ⚠  Original users.parquet not found (cloud/GitHub Actions environment).")
+    print("  → Will use live API users only.")
+    base_df = None
 
 # ── Step 2: check if API pulled any new users ────────────────────────────────
 new_df = None
@@ -124,16 +125,24 @@ else:
 
 # ── Step 3: merge ────────────────────────────────────────────────────────────
 if new_df is not None and len(new_df) > 0:
-    print("\nMerging new users with historical data...")
-    combined = pd.concat([base_df, new_df], ignore_index=True)
+    if base_df is not None:
+        print("\nMerging new users with historical data...")
+        combined = pd.concat([base_df, new_df], ignore_index=True)
+    else:
+        print("\nNo historical data — using live API users only...")
+        combined = new_df.copy()
     # keep newest record per userId (new API data wins over old)
     combined = combined.sort_values("updatedAt", ascending=True, na_position="first")
     combined = combined.drop_duplicates(subset=["userId"], keep="last")
     combined = combined.reset_index(drop=True)
-    print(f"  → Historical: {len(base_df):,} | New: {len(new_df):,} | Merged (deduped): {len(combined):,}")
-else:
+    n_hist = len(base_df) if base_df is not None else 0
+    print(f"  → Historical: {n_hist:,} | New: {len(new_df):,} | Merged (deduped): {len(combined):,}")
+elif base_df is not None:
     combined = base_df.copy()
     print(f"\n  → Using {len(combined):,} historical users as-is")
+else:
+    print("\n  ⚠  No users from API and no historical file — creating empty users table.")
+    combined = pd.DataFrame(columns=["userId", "fullName", "type"])
 
 # ── Step 4: save ─────────────────────────────────────────────────────────────
 OUT.parent.mkdir(parents=True, exist_ok=True)
