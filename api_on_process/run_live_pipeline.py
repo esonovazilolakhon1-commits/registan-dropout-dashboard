@@ -27,26 +27,40 @@ LOG_DIR.mkdir(exist_ok=True)
 log_file = LOG_DIR / f"live_pipeline_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.log"
 
 STEPS = [
-    ("Fetch recent data from API",    "api_on_process/extract_recent.py"),
-    ("Clean branches",                "src/clean/clean_branches.py"),
-    ("Merge users (historical + new)","api_on_process/merge_users.py"),
-    ("Clean courses",                 "src/clean/clean_courses.py"),
-    ("Clean levels",                  "src/clean/clean_levels.py"),
-    ("Clean groups",                  "src/clean/clean_groups.py"),
-    ("Clean lessons",                 "src/clean/clean_lessons.py"),
-    ("Clean students",                "src/clean/clean_students.py"),
-    ("Clean student-groups",          "src/clean/clean_studentgroups.py"),
-    ("Clean student-teachers",        "src/clean/clean_studentteachers.py"),
-    ("Clean group histories",         "src/clean/clean_grouphistories.py"),
-    ("Clean student histories",       "src/clean/clean_studenthistories.py"),
-    ("Clean attendance",              "src/clean/clean_attendance.py"),
-    ("Clean transactions",            "src/clean/clean_transactions.py"),
-    ("Clean orders",                  "src/clean/clean_orders.py"),
-    ("Build master feature table",    "src/features/build_master.py"),
-    ("Build snapshot panel",          "src/features/build_snapshots.py"),
-    ("Build snapshot features",       "src/features/build_snapshot_features.py"),
-    ("Encode snapshots",              "src/features/encode_snapshots.py"),
-    ("Generate live predictions",     "api_on_process/predict_live.py"),
+    # ── Phase 1: Pull fresh data from API ────────────────────────────────────
+    ("Fetch recent data from API",     "api_on_process/extract_recent.py"),
+
+    # ── Phase 2: Clean all collections ───────────────────────────────────────
+    ("Clean branches",                 "src/clean/clean_branches.py"),
+    ("Merge users (historical + new)", "api_on_process/merge_users.py"),
+    ("Clean courses",                  "src/clean/clean_courses.py"),
+    ("Clean levels",                   "src/clean/clean_levels.py"),
+    ("Clean groups",                   "src/clean/clean_groups.py"),
+    ("Clean lessons",                  "src/clean/clean_lessons.py"),
+    ("Clean students",                 "src/clean/clean_students.py"),
+    ("Clean student-groups",           "src/clean/clean_studentgroups.py"),
+    ("Clean student-teachers",         "src/clean/clean_studentteachers.py"),
+    ("Clean group histories",          "src/clean/clean_grouphistories.py"),
+    ("Clean student histories",        "src/clean/clean_studenthistories.py"),
+    ("Clean attendance",               "src/clean/clean_attendance.py"),
+    ("Clean transactions",             "src/clean/clean_transactions.py"),
+    ("Clean orders",                   "src/clean/clean_orders.py"),
+
+    # ── Phase 3: Build features ───────────────────────────────────────────────
+    ("Build master feature table",     "src/features/build_master.py"),
+    ("Build snapshot panel",           "src/features/build_snapshots.py"),
+    ("Build snapshot features",        "src/features/build_snapshot_features.py"),
+    ("Encode snapshots",               "src/features/encode_snapshots.py"),
+
+    # ── Phase 4: Continuous learning ──────────────────────────────────────────
+    # Label outcomes: check which students predicted last month actually left.
+    # Retrain: append those labeled rows to training data, retrain LightGBM.
+    # The model gains real experience each month it runs.
+    ("Label outcomes from last month", "api_on_process/check_outcomes.py"),
+    ("Retrain model with new data",    "api_on_process/retrain_incremental.py"),
+
+    # ── Phase 5: Predict with improved model ─────────────────────────────────
+    ("Generate live predictions",      "api_on_process/predict_live.py"),
 ]
 
 TOTAL = len(STEPS)

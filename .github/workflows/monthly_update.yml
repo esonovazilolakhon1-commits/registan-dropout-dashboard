@@ -1,69 +1,64 @@
-name: Monthly Live Predictions Update
+name: Monthly Dropout Prediction Update
 
 on:
-  # Runs at 08:00 UTC on the 28th–31st of every month.
-  # The job itself checks whether today is the last day of the month
-  # and exits early if not (handles months shorter than 31 days).
   schedule:
-    - cron: '0 8 28-31 * *'
-
-  # Also allows you to trigger it manually from GitHub → Actions tab
+    - cron: '0 7 19 * *'
   workflow_dispatch:
 
 jobs:
   update-predictions:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
-      # ── 1. Checkout repo ───────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
 
-      # ── 2. Check if today is the last day of the month ─────────
-      - name: Check last day of month
-        id: lastday
-        run: |
-          TODAY=$(date +%d)
-          LAST=$(cal $(date +%m) $(date +%Y) | awk 'NF{last=$NF} END{print last}')
-          if [ "$TODAY" -eq "$LAST" ]; then
-            echo "is_last_day=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_last_day=false" >> $GITHUB_OUTPUT
-            echo "Today ($TODAY) is not the last day ($LAST) — skipping."
-          fi
-
-      # ── 3. Set up Python ───────────────────────────────────────
-      - name: Set up Python 3.9
-        if: steps.lastday.outputs.is_last_day == 'true'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
 
-      # ── 4. Install dependencies ────────────────────────────────
       - name: Install dependencies
-        if: steps.lastday.outputs.is_last_day == 'true'
-        run: pip install -r requirements.txt
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # ── 5. Run live pipeline ───────────────────────────────────
-      - name: Run live pipeline
-        if: steps.lastday.outputs.is_last_day == 'true'
+      - name: Create .env from secrets
         env:
           API_KEY:      ${{ secrets.API_KEY }}
           API_TOKEN:    ${{ secrets.API_TOKEN }}
+          API_PHONE:    ${{ secrets.API_PHONE }}
+          API_PASSWORD: ${{ secrets.API_PASSWORD }}
           ORGANIZATION: ${{ secrets.ORGANIZATION }}
           BRANCH:       ${{ secrets.BRANCH }}
-        run: python api_on_process/run_live_pipeline.py
+        run: |
+          printf "API_KEY=%s\nAPI_TOKEN=%s\nAPI_PHONE=%s\nAPI_PASSWORD=%s\nORGANIZATION=%s\nBRANCH=%s\n" \
+            "$API_KEY" "$API_TOKEN" "$API_PHONE" "$API_PASSWORD" "$ORGANIZATION" "$BRANCH" > .env
+          echo ".env written"
 
-      # ── 6. Commit updated live_predictions.parquet ────────────
-      - name: Commit live predictions
-        if: steps.lastday.outputs.is_last_day == 'true'
+      - name: Run live pipeline
+        run: python3 api_on_process/run_live_pipeline.py
+
+      - name: Commit updated predictions
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed/live_predictions.parquet
-          git diff --cached --quiet || git commit -m "Auto-update: live predictions $(date +%Y-%m-%d)"
-          git push
+          git add data/processed/live_predictions.parquet \
+                  data/processed/live_features.parquet \
+                  data/processed/outcomes_history.parquet \
+                  models/best_model.pkl
+          if git diff --staged --quiet; then
+            echo "Nothing changed."
+          else
+            MONTH=$(date +'%Y-%m')
+            git commit -m "chore: monthly update ${MONTH} — retrained model + new predictions"
+            git push
+          fi
+
+      - name: Remove .env
+        if: always()
+        run: rm -f .env

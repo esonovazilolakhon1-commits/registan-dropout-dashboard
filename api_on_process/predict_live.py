@@ -121,6 +121,15 @@ for i in range(len(X)):
     top_factors.append(", ".join(picks) if picks else "no strong risk factors")
 score["topFactors"] = top_factors
 
+# ── Step 3b: save features for next month's outcome labeling ─────────────────
+# check_outcomes.py needs the actual feature values used this month so it can
+# create new training rows once we know which students actually dropped out.
+print("\nStep 3b: Saving feature snapshot for future retraining...")
+feat_snapshot = score[['studentId', 'courseName', 'snapshotMonth'] + features].copy()
+feat_out_path = ORIGINAL_PROCESSED / "live_features.parquet"
+feat_snapshot.to_parquet(feat_out_path, index=False)
+print(f"  → Feature snapshot saved → {feat_out_path}  ({len(feat_snapshot):,} rows)")
+
 # ── Step 4: enrich with student names, phones, teacher & moderator names ──────
 print("\nStep 4: Enriching with student and staff names...")
 
