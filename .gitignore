@@ -1,0 +1,29 @@
+# virtual environment
+venv/
+
+# raw data - too large and contains full PII (names, phones)
+data/raw/
+data/reference/
+
+# interim data - ignore everything except students.parquet
+data/interim/*
+!data/interim/students.parquet
+
+# processed data - ignore everything except dashboard files
+data/processed/*
+!data/processed/master_ml.parquet
+!data/processed/master_full.parquet
+!data/processed/predictions.parquet
+!data/processed/snap_train.parquet
+!data/processed/live_predictions.parquet
+
+# models - ignore everything except best_model.pkl
+models/*
+!models/best_model.pkl
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.env

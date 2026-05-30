@@ -1,0 +1,31 @@
+# Registan Dropout Prediction — pinned dependencies
+# Tested on Python 3.9 (macOS). Install with:
+#   pip install -r requirements.txt
+
+# Core data
+pandas==2.3.3
+numpy==2.0.2
+pyarrow==21.0.0
+
+# Machine learning
+scikit-learn==1.6.1
+xgboost==2.1.4          # MUST match — model.pkl was trained on this version
+lightgbm==4.6.0
+shap==0.49.1
+optuna
+
+# Visualisation & dashboard
+matplotlib==3.9.4
+seaborn==0.13.2
+plotly==6.7.0
+streamlit==1.50.0
+
+# Pipeline utilities
+ijson                   # required by clean_students.py
+python-dotenv
+requests==2.32.5
+schedule
+
+# Notebooks (optional)
+jupyter
+ipykernel
