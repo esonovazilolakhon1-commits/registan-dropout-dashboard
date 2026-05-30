@@ -65,10 +65,10 @@ ENDPOINTS = [
     # We fetch from RECENT_FROM (2026-03-19); historical users are already in data/interim/.
     dict(name="users",            api_path="users",            output=USERS,            use_dates=True,  optional=True),
 
-    # students — fetch since March 19 for new registrations.
-    # Name lookup in predict_live.py uses raw JSON + orders.studentInfo instead,
-    # so this endpoint failing is non-fatal (100% names resolved without it).
-    dict(name="students",         api_path="students",         output=STUDENTS,         use_dates=True,  optional=True),
+    # students — fetch ALL (no date filter) so clean_students.py gets the full
+    # active student list regardless of when they enrolled. GitHub Actions has no
+    # historical data/live_raw/students.raw.json, so we can't rely on a cached file.
+    dict(name="students",         api_path="students",         output=STUDENTS,         use_dates=False, optional=False),
     dict(name="groups",           api_path="groups",           output=GROUPS,           use_dates=True,  optional=False),
     dict(name="orders",           api_path="orders",           output=ORDERS,           use_dates=True,  optional=False),
     dict(name="studentgroups",    api_path="student-groups",   output=STUDENTGROUPS,    use_dates=True,  optional=False),
