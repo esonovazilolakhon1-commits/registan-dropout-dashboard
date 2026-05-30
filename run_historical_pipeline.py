@@ -1,19 +1,20 @@
-# run_pipeline.py
+# run_historical_pipeline.py  (STATIC / HISTORICAL DATA PIPELINE)
 # ─────────────────────────────────────────────────────────────────────────────
-# One-command runner for the Registan Dropout Prediction Pipeline (no-API version).
+# Processes the original historical dataset (data/raw/) and generates static
+# dropout predictions for all students in the dissertation study.
 #
 # What it does:
-#   1. Installs all required Python libraries from requirements.txt
-#   2. Runs every pipeline script in the correct order:
-#        clean → features → train → predict
-#   3. Prints a clear success/failure summary with timing
-#   4. Tells you how to launch the dashboard at the end
+#   clean → build features → encode → generate predictions
+# Output: data/processed/predictions.parquet
+#
+# Prerequisites: data/raw/ files must already be present (from MongoDB export).
+# Does NOT call the API — use api_on_process/run_live_pipeline.py for live data.
 #
 # How to run:
-#   python3 run_pipeline.py
+#   python3 run_historical_pipeline.py
 #
-# Note: Data files in data/raw/ must already be present.
-#       To refresh data from the Edutizim API see api_on_process/run_pipeline.py
+# Companion script for monthly live updates:
+#   python3 api_on_process/run_live_pipeline.py
 # ─────────────────────────────────────────────────────────────────────────────
 
 import sys
@@ -128,7 +129,7 @@ def run():
     started_at = datetime.now()
 
     log.info("=" * 60)
-    log.info("  REGISTAN DROPOUT PIPELINE  (local / no-API version)")
+    log.info("  REGISTAN HISTORICAL PIPELINE  (static data, no API)")
     log.info(f"  Started : {started_at.strftime('%Y-%m-%d %H:%M:%S')}")
     log.info(f"  Log     : {log_file}")
     log.info("=" * 60)

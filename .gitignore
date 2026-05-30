@@ -5,21 +5,34 @@ venv/
 data/raw/
 data/reference/
 
-# interim data - ignore everything except students.parquet
-data/interim/*
-!data/interim/students.parquet
+# live pipeline - regenerated every month, never committed
+data/live_raw/
+data/live_interim/
+data/live_processed/
 
-# processed data - ignore everything except dashboard files
+# logs - runtime only, not needed in repo
+logs/
+
+# interim data - all ignored (contains PII: names, phone numbers)
+data/interim/*
+
+# validation files - contain student names and phone numbers (PII)
+data/validation/
+
+# processed data - only commit files the dashboard reads
 data/processed/*
 !data/processed/master_ml.parquet
 !data/processed/master_full.parquet
 !data/processed/predictions.parquet
 !data/processed/snap_train.parquet
+!data/processed/snap_score.parquet
 !data/processed/live_predictions.parquet
 
-# models - ignore everything except best_model.pkl
+# models - only commit the production model and comparison models
 models/*
 !models/best_model.pkl
+!models/best_model_backup.pkl
+!models/lgbm_baseline.pkl
 
 # python cache
 __pycache__/

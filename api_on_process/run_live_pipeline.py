@@ -1,10 +1,16 @@
-# run_live_pipeline.py
+# run_live_pipeline.py  (LIVE / MONTHLY UPDATE PIPELINE)
 # ─────────────────────────────────────────────────────────────────────────────
-# Full live pipeline: fetch fresh API data → clean → features → live predict
-# Shows real-time progress, percentages, and clear crash messages.
+# Fetches fresh data from the Edutizim API, cleans it, builds features,
+# and generates live dropout predictions for currently active students.
 #
-# How to run:
+# Runs automatically every last day of the month via GitHub Actions.
+# Output: data/processed/live_predictions.parquet
+#
+# How to run manually:
 #   python3 api_on_process/run_live_pipeline.py
+#
+# Companion script for static/historical data:
+#   python3 run_historical_pipeline.py
 # ─────────────────────────────────────────────────────────────────────────────
 
 import sys
