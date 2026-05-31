@@ -29,16 +29,22 @@ jobs:
 
       - name: Create .env from secrets
         env:
-          API_KEY:      ${{ secrets.API_KEY }}
-          API_TOKEN:    ${{ secrets.API_TOKEN }}
-          API_PHONE:    ${{ secrets.API_PHONE }}
-          API_PASSWORD: ${{ secrets.API_PASSWORD }}
-          ORGANIZATION: ${{ secrets.ORGANIZATION }}
-          BRANCH:       ${{ secrets.BRANCH }}
+          API_KEY:               ${{ secrets.API_KEY }}
+          API_TOKEN:             ${{ secrets.API_TOKEN }}
+          API_PHONE:             ${{ secrets.API_PHONE }}
+          API_PASSWORD:          ${{ secrets.API_PASSWORD }}
+          ORGANIZATION:          ${{ secrets.ORGANIZATION }}
+          BRANCH:                ${{ secrets.BRANCH }}
+          DRIVE_RAW_FOLDER_ID:   ${{ secrets.DRIVE_RAW_FOLDER_ID }}
         run: |
-          printf "API_KEY=%s\nAPI_TOKEN=%s\nAPI_PHONE=%s\nAPI_PASSWORD=%s\nORGANIZATION=%s\nBRANCH=%s\n" \
-            "$API_KEY" "$API_TOKEN" "$API_PHONE" "$API_PASSWORD" "$ORGANIZATION" "$BRANCH" > .env
+          printf "API_KEY=%s\nAPI_TOKEN=%s\nAPI_PHONE=%s\nAPI_PASSWORD=%s\nORGANIZATION=%s\nBRANCH=%s\nDRIVE_RAW_FOLDER_ID=%s\n" \
+            "$API_KEY" "$API_TOKEN" "$API_PHONE" "$API_PASSWORD" "$ORGANIZATION" "$BRANCH" "$DRIVE_RAW_FOLDER_ID" > .env
           echo ".env written"
+
+      - name: Download historical raw data from Google Drive
+        run: |
+          pip install gdown
+          python3 download_raw_data.py
 
       - name: Run live pipeline
         run: python3 api_on_process/run_live_pipeline.py

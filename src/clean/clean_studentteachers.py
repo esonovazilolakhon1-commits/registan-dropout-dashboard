@@ -24,6 +24,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 import pandas as pd
 from src.config import STUDENTTEACHERS as RAW, STUDENTTEACHERS_CLEAN as OUT
 
+if not RAW.exists():
+    print(f"⚠  {RAW.name} not found (optional endpoint returned 0 records).")
+    print("   Saving empty studentteachers.parquet so downstream scripts don't crash.")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(columns=["studentTeacherId","studentId","teacherId","groupId",
+                           "state","isDeleted","joinedAt","graduatedAt","leftAt","frozenAt"]).to_parquet(OUT, index=False)
+    print(f"✅ Empty studentteachers saved → {OUT}")
+    import sys; sys.exit(0)
+
 print("Reading studentteachers.raw.csv ...")
 df = pd.read_csv(RAW)
 

@@ -24,6 +24,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 import pandas as pd
 from src.config import LEVELS as RAW, LEVELS_CLEAN as OUT
 
+if not RAW.exists():
+    print(f"⚠  {RAW.name} not found (optional endpoint returned 0 records).")
+    print("   Saving empty levels.parquet so downstream scripts don't crash.")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(columns=["levelId","name","type","isDeleted","isTestRecord"]).to_parquet(OUT, index=False)
+    print(f"✅ Empty levels saved → {OUT}")
+    import sys; sys.exit(0)
+
 print("Reading levelsifneeded.raw.csv ...")
 df = pd.read_csv(RAW)
 
