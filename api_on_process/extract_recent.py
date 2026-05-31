@@ -65,10 +65,8 @@ ENDPOINTS = [
     # We fetch from RECENT_FROM (2026-03-19); historical users are already in data/interim/.
     dict(name="users",            api_path="users",            output=USERS,            use_dates=True,  optional=True),
 
-    # students — fetch from 2020 (all historical) using date params.
-    # use_dates=False returns 0 on this API; using a very early from_date
-    # ensures we get every enrolled student regardless of when they joined.
-    dict(name="students",         api_path="students",         output=STUDENTS,         use_dates=True,  optional=False, from_date="2020-01-01T00:00:00.000Z"),
+    # students — required so pipeline fails loudly at step 1 if API returns 0.
+    dict(name="students",         api_path="students",         output=STUDENTS,         use_dates=True,  optional=False),
     dict(name="groups",           api_path="groups",           output=GROUPS,           use_dates=True,  optional=False),
     dict(name="orders",           api_path="orders",           output=ORDERS,           use_dates=True,  optional=False),
     dict(name="studentgroups",    api_path="student-groups",   output=STUDENTGROUPS,    use_dates=True,  optional=False),

@@ -316,6 +316,16 @@ def normalize_phone(val):
 # the dataframe) to avoid loading irrelevant students into memory.
 # Students without a Chilonzor branch entry (state is None) are
 # from other branches and are skipped entirely.
+if not RAW.exists():
+    print(f"⚠  {RAW.name} not found (no new students since last fetch — API returned 0).")
+    print("   Saving empty students.parquet so downstream scripts don't crash.")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(columns=["studentId","fullName","firstName","phoneNumber",
+                           "state","isDeleted","createdAt","updatedAt",
+                           "archiveDate","graduatedAt","moderatorId"]).to_parquet(OUT, index=False)
+    print(f"✅ Empty students saved → {OUT}")
+    import sys; sys.exit(0)
+
 print("Reading students.raw.json ...")
 records = []
 
