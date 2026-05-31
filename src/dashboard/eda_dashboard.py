@@ -856,11 +856,26 @@ elif page == "Correlation & Features":
     with col_a:
         st.subheader("Feature Correlation with Dropout")
         st.caption("Red = positively correlated with dropout. Green = negatively correlated.")
-        corr_img = FIGURES / "target_correlation.png"
-        if corr_img.exists():
-            st.image(str(corr_img), use_container_width=True)
-        else:
-            st.warning("Run src/analysis/correlation.py first.")
+        target_corr_a = snap[num_cols + ['label']].corr()['label'].drop('label')
+        target_corr_a_sorted = target_corr_a.reindex(
+            target_corr_a.abs().sort_values(ascending=False).index
+        ).head(20)
+        colors_a = ['#e74c3c' if v > 0 else '#2ecc71' for v in target_corr_a_sorted.values]
+        fig_a = go.Figure(go.Bar(
+            x=target_corr_a_sorted.values,
+            y=target_corr_a_sorted.index,
+            orientation='h',
+            marker_color=colors_a,
+            text=[f"{v:.3f}" for v in target_corr_a_sorted.values],
+            textposition='outside'
+        ))
+        fig_a.add_vline(x=0, line_color='white', line_width=1)
+        fig_a.update_layout(
+            xaxis_title='Pearson r with dropout label',
+            yaxis=dict(autorange='reversed'),
+            height=500
+        )
+        st.plotly_chart(fig_a, use_container_width=True, key="corr_col_a")
 
     with col_b:
         st.subheader("Top 20 Features — Live Ranking")
@@ -884,16 +899,33 @@ elif page == "Correlation & Features":
             yaxis=dict(autorange='reversed'),
             height=500
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="corr_col_b")
 
     st.markdown("---")
     st.subheader("Full Correlation Heatmap")
     st.caption("Lower triangle only. Red = positive correlation. Blue = negative.")
-    heatmap_img = FIGURES / "correlation_matrix.png"
-    if heatmap_img.exists():
-        st.image(str(heatmap_img), use_container_width=True)
-    else:
-        st.warning("Run src/analysis/correlation.py first.")
+    import numpy as np
+    top_cols = (
+        snap[num_cols + ['label']].corr()['label'].drop('label')
+        .abs().sort_values(ascending=False).head(20).index.tolist()
+    )
+    corr_matrix = snap[top_cols].corr()
+    mask = np.triu(np.ones(corr_matrix.shape, dtype=bool), k=1)
+    corr_masked = corr_matrix.where(~mask)
+    fig_hm = go.Figure(go.Heatmap(
+        z=corr_masked.values,
+        x=corr_masked.columns.tolist(),
+        y=corr_masked.index.tolist(),
+        colorscale='RdBu_r',
+        zmin=-1, zmax=1,
+        colorbar=dict(title='r'),
+    ))
+    fig_hm.update_layout(
+        height=600,
+        xaxis=dict(tickangle=-45),
+        yaxis=dict(autorange='reversed'),
+    )
+    st.plotly_chart(fig_hm, use_container_width=True, key="corr_heatmap")
 
     st.markdown("---")
     st.subheader("Feature Averages by Label")
