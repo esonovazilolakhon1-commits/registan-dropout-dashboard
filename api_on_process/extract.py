@@ -45,11 +45,19 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# API configuration (values come from .env)
+
+def _require(name):
+    val = os.getenv(name, "").strip()
+    if not val:
+        raise EnvironmentError(f"{name} is not set. Add it to .env or GitHub Secrets.")
+    return val
+
+
+# API configuration (values come from .env or GitHub Secrets)
 BASE_URL     = "https://backend.edutizim.uz/external-api"
-API_KEY      = os.getenv("API_KEY",      "dev:07cacc808ee6a6dd9adce3344ff9bf20")
-ORGANIZATION = os.getenv("ORGANIZATION", "registan")
-BRANCH       = os.getenv("BRANCH",       "6266d9e35bbdd74734fddadd")
+API_KEY      = _require("API_KEY")
+ORGANIZATION = _require("ORGANIZATION")
+BRANCH       = _require("BRANCH")
 API_PHONE    = os.getenv("API_PHONE",    "")
 API_PASSWORD = os.getenv("API_PASSWORD", "")
 PAGE_SIZE    = int(os.getenv("API_PAGE_SIZE", "200"))
