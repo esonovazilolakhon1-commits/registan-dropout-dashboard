@@ -1,9 +1,11 @@
 name: Monthly Dropout Prediction Update
-
 on:
   schedule:
     - cron: '0 7 28 * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   update-predictions:
