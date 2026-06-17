@@ -109,21 +109,12 @@ snap_global['preferredShift'] = snap_global[_sh].idxmax(axis=1).str.replace('pre
 snap_global['gender_label']   = snap_global['gender'].map({0: 'female', 1: 'male'})
 snap_global['Status']         = snap_global['label'].map({1: 'Dropout', 0: 'Retained'})
 
-# Build joinDate on snap_global so the sidebar date filter can be applied to snap_fdf.
-# FIX: without this, the From/To date inputs had no effect on any of the chart pages
-# because snap_fdf was never filtered by date — only fdf was.
-if 'joinYear' in snap_global.columns:
-    _sy = snap_global['joinYear'].fillna(2022).astype(int).astype(str)
-    _sm = snap_global['joinMonth'].fillna('01').astype(str).str[-2:].str.zfill(2) \
-          if 'joinMonth' in snap_global.columns else '01'
-    snap_global['joinDate'] = pd.to_datetime(
-        _sy + '-' + _sm + '-01', errors='coerce'
-    ).dt.tz_localize(None)
-else:
-    # fallback: use snapshotMonth (always present) as the date proxy
-    snap_global['joinDate'] = pd.to_datetime(
-        snap_global['snapshotMonth'] + '-01', errors='coerce'
-    ).dt.tz_localize(None)
+# Build _snapDate from snapshotMonth so the sidebar date filter applies to snap_fdf.
+# snapshotMonth is always present (format "YYYY-MM"); joinYear/joinMonth may not exist
+# in snap_train.parquet because they were one-hot encoded during feature engineering.
+snap_global['_snapDate'] = pd.to_datetime(
+    snap_global['snapshotMonth'] + '-01', errors='coerce'
+).dt.tz_localize(None)
 
 # I reconstruct a proper datetime from the separate joinYear and joinMonth
 # columns so the sidebar date slider can compare against real dates. The
@@ -176,8 +167,10 @@ if page not in ("Predictions", "Live Predictions"):
         st.session_state['f_season']  = 'All'
         st.session_state['f_alltime'] = True
     st.sidebar.button("↺ Reset all filters", on_click=_reset_filters)
-    min_date = df['joinDate'].min()
-    max_date = df['joinDate'].max()
+    # Use snapshotMonth range as the date axis — it's the observation date and
+    # always present in snap_global. df joinDate range can differ (it's enrolment date).
+    min_date = snap_global['_snapDate'].min()
+    max_date = snap_global['_snapDate'].max()
     use_all_time = st.sidebar.checkbox("All time", value=True, key='f_alltime')
     if use_all_time:
         date_from = min_date
@@ -204,9 +197,12 @@ if page not in ("Predictions", "Live Predictions"):
     if sel_shift  != 'All': fdf = fdf[fdf['preferredShift'] == sel_shift]
     if sel_season != 'All': fdf = fdf[fdf['joinSeason']     == sel_season]
     train = fdf[fdf['dropout'].isin([0, 1])].copy()
-    # FIX: apply date filter to snap_fdf so chart pages respond to the From/To inputs
+    # Apply date filter to snap_fdf using _snapDate (built from snapshotMonth).
+    # This is the correct column — snapshotMonth is the observation date and
+    # is guaranteed to exist; joinYear/joinMonth may have been dropped during
+    # feature engineering of snap_train.parquet.
     snap_fdf = snap_global.copy()
-    snap_fdf = snap_fdf[(snap_fdf['joinDate'] >= date_from) & (snap_fdf['joinDate'] <= date_to)]
+    snap_fdf = snap_fdf[(snap_fdf['_snapDate'] >= date_from) & (snap_fdf['_snapDate'] <= date_to)]
     if sel_course != 'All': snap_fdf = snap_fdf[snap_fdf['courseName']     == sel_course]
     if sel_gender != 'All': snap_fdf = snap_fdf[snap_fdf['gender_label']   == sel_gender]
     if sel_shift  != 'All': snap_fdf = snap_fdf[snap_fdf['preferredShift'] == sel_shift]
@@ -215,8 +211,8 @@ if page not in ("Predictions", "Live Predictions"):
     st.sidebar.caption(f"Snap rows after filters: {len(snap_fdf):,}")
 else:
     # Predictions / Live Predictions — no global filters shown, set defaults
-    min_date   = df['joinDate'].min()
-    max_date   = df['joinDate'].max()
+    min_date   = snap_global['_snapDate'].min()
+    max_date   = snap_global['_snapDate'].max()
     date_from  = min_date
     date_to    = max_date
     sel_course = 'All'
