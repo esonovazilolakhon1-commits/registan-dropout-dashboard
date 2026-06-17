@@ -1,12 +1,14 @@
+# =============================================================
 # eda_dashboard.py
+# =============================================================
 # Interactive Streamlit dashboard for exploring the Registan
 # Chilonzor dropout dataset and presenting live predictions.
 #
-# Author : Zilolakhon Esonova - Westminster International University Tashkent
+# Author : Zilolakhon Esonova — Westminster International University Tashkent
 # Dissertation: Predicting Student Dropout at Registan (Chilonzor)
 #
 # Why I built this as a Streamlit app:
-#   My dissertation has two audiences - the academic committee and
+#   My dissertation has two audiences — the academic committee and
 #   Registan's operational team. A Streamlit app requires no frontend
 #   infrastructure: a moderator with Python installed can run it with
 #   a single command. This made it the right choice for a small
@@ -14,9 +16,9 @@
 #
 # Why these seven pages:
 #   Overview:             high-level KPIs and the monthly dropout trend
-#                         - the first thing a manager wants to see.
+#                         — the first thing a manager wants to see.
 #   Course Analysis:      I needed to verify that dropout rates differ
-#                         meaningfully by course (they do - Korean is
+#                         meaningfully by course (they do — Korean is
 #                         structurally harder to retain than General English).
 #   Period Comparison:    lets Registan compare any two calendar periods
 #                         side by side to detect seasonal patterns.
@@ -24,9 +26,9 @@
 #                         per-teacher and per-moderator dropout rates.
 #   Attendance & Payment: the two feature groups with the strongest
 #                         predictive signal, shown as distributions.
-#   Correlation & Features: academic transparency - I show the Pearson
+#   Correlation & Features: academic transparency — I show the Pearson
 #                           correlations used in my dissertation analysis.
-#   Predictions:          the core deployment deliverable - a ranked,
+#   Predictions:          the core deployment deliverable — a ranked,
 #                         colour-coded list of at-risk active students
 #                         that a moderator can filter and export.
 #
@@ -34,6 +36,7 @@
 #         data/processed/master_full.parquet
 #         data/processed/snap_train.parquet
 #         data/processed/predictions.parquet  (if predict.py has been run)
+# =============================================================
 
 import sys
 from pathlib import Path
@@ -53,8 +56,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-#  Login screen
-# Credentials are stored in Streamlit Cloud secrets (Settings ->
+# ── Login screen ──────────────────────────────────────────────
+# Credentials are stored in Streamlit Cloud secrets (Settings →
 # Secrets) as:
 #   [auth]
 #   username = "your_username"
@@ -67,13 +70,13 @@ def _check_login():
         correct_user = creds["username"]
         correct_pass = creds["password"]
     except Exception:
-        return True   # no secrets configured -> open access (local dev)
+        return True   # no secrets configured → open access (local dev)
 
     if st.session_state.get("authenticated"):
         return True
 
     st.markdown(
-        "<h2 style='text-align:center; margin-top:80px;'> Registan Dashboard</h2>",
+        "<h2 style='text-align:center; margin-top:80px;'>🔒 Registan Dashboard</h2>",
         unsafe_allow_html=True,
     )
     col1, col2, col3 = st.columns([1, 1.2, 1])
@@ -145,7 +148,9 @@ SNAP_COLORS = {
     'Retained': '#2ecc71',
 }
 
+# =============================================================
 # SIDEBAR
+# =============================================================
 st.sidebar.title("Registan EDA")
 st.sidebar.markdown("---")
 
@@ -157,13 +162,14 @@ page = st.sidebar.radio("Navigate", [
     "Attendance & Payment",
     "Correlation & Features",
     "Predictions",
+    "Live Predictions"
 ])
 
-if page not in ("Predictions",):
+if page not in ("Predictions", "Live Predictions"):
     st.sidebar.markdown("---")
     st.sidebar.subheader("Global Filters")
 
-    # Reset button - sets all filters back to their default values
+    # Reset button — sets all filters back to their default values
     def _reset_filters():
         st.session_state['f_course']  = 'All'
         st.session_state['f_gender']  = 'All'
@@ -171,7 +177,7 @@ if page not in ("Predictions",):
         st.session_state['f_season']  = 'All'
         st.session_state['f_alltime'] = True
 
-    st.sidebar.button("retry Reset all filters", on_click=_reset_filters)
+    st.sidebar.button("↺ Reset all filters", on_click=_reset_filters)
 
     min_date = df['joinDate'].min()
     max_date = df['joinDate'].max()
@@ -212,19 +218,12 @@ if page not in ("Predictions",):
     if sel_gender != 'All': snap_fdf = snap_fdf[snap_fdf['gender_label']   == sel_gender]
     if sel_shift  != 'All': snap_fdf = snap_fdf[snap_fdf['preferredShift'] == sel_shift]
     if sel_season != 'All': snap_fdf = snap_fdf[snap_fdf['joinSeason']     == sel_season]
-    if not use_all_time:
-        date_from_str = date_from.strftime('%Y-%m')
-        date_to_str   = date_to.strftime('%Y-%m')
-        snap_fdf = snap_fdf[
-            (snap_fdf['snapshotMonth'] >= date_from_str) &
-            (snap_fdf['snapshotMonth'] <= date_to_str)
-        ]
 
     st.sidebar.markdown("---")
     st.sidebar.caption(f"Snap rows after filters: {len(snap_fdf):,}")
 
 else:
-    # Predictions / Live Predictions - no global filters shown, set defaults
+    # Predictions / Live Predictions — no global filters shown, set defaults
     min_date   = df['joinDate'].min()
     max_date   = df['joinDate'].max()
     date_from  = min_date
@@ -237,7 +236,9 @@ else:
     train      = fdf[fdf['dropout'].isin([0, 1])].copy()
     snap_fdf   = snap_global.copy()
 
+# =============================================================
 # OVERVIEW PAGE
+# =============================================================
 if page == "Overview":
     st.title("Overview Dashboard")
     st.markdown("---")
@@ -260,7 +261,7 @@ if page == "Overview":
     c5.metric("Snapshot Dropout Rate", f"{dropout_rate:.1f}%")
 
     st.caption(
-        "Metrics based on the snapshot training set - one row per (student, month). "
+        "Metrics based on the snapshot training set — one row per (student, month). "
         "Label = 1 means the student had no lessons in the following 30 days (dropout signal). "
         "Active students are the current scoring cohort excluded from training."
     )
@@ -288,7 +289,7 @@ if page == "Overview":
             hole=0.4
         )
         fig.update_traces(textinfo='percent+label')
-        st.plotly_chart(fig, use_container_width=True, key="chart_290")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_b:
         st.subheader("Dropout Rate by Course")
@@ -310,7 +311,7 @@ if page == "Overview":
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True, key="chart_312")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
     st.subheader("Monthly Dropout Rate Trend")
@@ -334,9 +335,11 @@ if page == "Overview":
         y=dropout_rate, line_dash='dash', line_color='gray',
         annotation_text=f'Overall avg: {dropout_rate:.1f}%'
     )
-    st.plotly_chart(fig, use_container_width=True, key="chart_336")
+    st.plotly_chart(fig, use_container_width=True)
 
+# =============================================================
 # COURSE ANALYSIS PAGE
+# =============================================================
 elif page == "Course Analysis":
     st.title("Course Analysis")
     st.markdown("---")
@@ -372,7 +375,7 @@ elif page == "Course Analysis":
         )
         fig.update_yaxes(tickformat='.0%')
         fig.update_xaxes(tickangle=-30)
-        st.plotly_chart(fig, use_container_width=True, key="chart_376")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_b:
         st.subheader("Last 30-Day Attendance by Course")
@@ -384,7 +387,7 @@ elif page == "Course Analysis":
         )
         fig.update_yaxes(tickformat='.0%')
         fig.update_xaxes(tickangle=-30)
-        st.plotly_chart(fig, use_container_width=True, key="chart_388")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
@@ -405,7 +408,7 @@ elif page == "Course Analysis":
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True, key="chart_409")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_d:
         st.subheader("Dropout Rate by Season")
@@ -422,9 +425,11 @@ elif page == "Course Analysis":
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True, key="chart_426")
+        st.plotly_chart(fig, use_container_width=True)
 
+# =============================================================
 # PERIOD COMPARISON PAGE
+# =============================================================
 elif page == "Period Comparison":
     st.title("Period Comparison")
     st.markdown("Compare two snapshot periods side by side.")
@@ -454,10 +459,10 @@ elif page == "Period Comparison":
         n      = len(pdata)
         n_drop = int((pdata['label'] == 1).sum())
         dr     = n_drop / n * 100 if n > 0 else 0
-        st.metric(f"{label} - Snapshots",     f"{n:,}")
-        st.metric(f"{label} - Dropout Rate",  f"{dr:.1f}%")
-        st.metric(f"{label} - Avg Attendance",f"{pdata['attendanceRate'].mean():.1%}")
-        st.metric(f"{label} - Avg Pay Months",f"{pdata['paymentMonths'].mean():.1f}")
+        st.metric(f"{label} — Snapshots",     f"{n:,}")
+        st.metric(f"{label} — Dropout Rate",  f"{dr:.1f}%")
+        st.metric(f"{label} — Avg Attendance",f"{pdata['attendanceRate'].mean():.1%}")
+        st.metric(f"{label} — Avg Pay Months",f"{pdata['paymentMonths'].mean():.1f}")
 
     with col_a:
         show_period_metrics(pa, "Period A")
@@ -486,7 +491,7 @@ elif page == "Period Comparison":
             labels={'dropout_rate': 'Dropout Rate (%)', 'courseName': 'Course'}
         )
         fig.update_xaxes(tickangle=-30)
-        st.plotly_chart(fig, use_container_width=True, key="chart_492")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_d:
         st.subheader("Attendance Rate Distribution")
@@ -504,7 +509,7 @@ elif page == "Period Comparison":
             xaxis_title='Attendance Rate',
             yaxis_title='Count'
         )
-        st.plotly_chart(fig, use_container_width=True, key="chart_510")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
@@ -520,7 +525,7 @@ elif page == "Period Comparison":
             y=pb['paymentMonths'], name='Period B', marker_color='#e74c3c'
         ))
         fig.update_layout(yaxis_title='Payment Months')
-        st.plotly_chart(fig, use_container_width=True, key="chart_526")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_f:
         st.subheader("Debt Rate Comparison")
@@ -536,16 +541,18 @@ elif page == "Period Comparison":
             color_discrete_sequence=['#3498db', '#e74c3c'],
             labels={'value': 'Rate (%)', 'variable': 'Metric'}
         )
-        st.plotly_chart(fig, use_container_width=True, key="chart_542")
+        st.plotly_chart(fig, use_container_width=True)
 
+# =============================================================
 # TEACHER & MODERATOR PAGE
+# =============================================================
 elif page == "Teacher & Moderator":
     st.title("Teacher & Moderator Analysis")
     st.markdown("---")
     st.caption(
         "Teacher and moderator names are sourced from administrative records (master_full.parquet). "
         "Dropout rates here reflect actual student outcomes rather than the 30-day snapshot label "
-        "used for model training - this is intentional since teacher performance is evaluated on "
+        "used for model training — this is intentional since teacher performance is evaluated on "
         "whether students ultimately stayed or left, not on a monthly attendance window."
     )
 
@@ -607,7 +614,7 @@ elif page == "Teacher & Moderator":
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(coloraxis_showscale=False, height=550)
-        st.plotly_chart(fig, use_container_width=True, key="chart_615")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_b:
         st.subheader("Teacher Avg Attendance Rate")
@@ -651,7 +658,7 @@ elif page == "Teacher & Moderator":
         )
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(height=550)
-        st.plotly_chart(fig, use_container_width=True, key="chart_659")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
     st.subheader("Moderator Dropout Rate")
@@ -684,9 +691,11 @@ elif page == "Teacher & Moderator":
     )
     fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
     fig.update_layout(coloraxis_showscale=False, xaxis_tickangle=-30)
-    st.plotly_chart(fig, use_container_width=True, key="chart_692")
+    st.plotly_chart(fig, use_container_width=True)
 
+  # =============================================================
 # ATTENDANCE & PAYMENT PAGE
+# =============================================================
 elif page == "Attendance & Payment":
     st.title("Attendance & Payment Analysis")
     st.markdown("---")
@@ -706,7 +715,7 @@ elif page == "Attendance & Payment":
 
     with col_a:
         st.subheader("Last-30-Day Attendance Distribution")
-        st.caption("Attendance rate in the 30 days before each snapshot - the model's strongest predictor.")
+        st.caption("Attendance rate in the 30 days before each snapshot — the model's strongest predictor.")
         fig = px.histogram(
             snap_fdf, x='attendanceLast30Days',
             color='Status', color_discrete_map=SNAP_COLORS,
@@ -718,7 +727,7 @@ elif page == "Attendance & Payment":
             legend=dict(orientation='h', yanchor='bottom', y=1.02),
             yaxis_title='Number of Snapshots'
         )
-        st.plotly_chart(fig, use_container_width=True, key="chart_728")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_b:
         st.subheader("Overall Attendance Rate Distribution")
@@ -734,7 +743,7 @@ elif page == "Attendance & Payment":
             legend=dict(orientation='h', yanchor='bottom', y=1.02),
             yaxis_title='Number of Snapshots'
         )
-        st.plotly_chart(fig, use_container_width=True, key="chart_744")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
@@ -753,7 +762,7 @@ elif page == "Attendance & Payment":
             legend=dict(orientation='h', yanchor='bottom', y=1.02),
             yaxis_title='Number of Snapshots'
         )
-        st.plotly_chart(fig, use_container_width=True, key="chart_763")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_d:
         st.subheader("Average Debt & Unpaid Rate by Label")
@@ -777,7 +786,7 @@ elif page == "Attendance & Payment":
         fig.for_each_trace(lambda t: t.update(
             name='Debt Rate' if 'debt' in t.name else 'Unpaid Rate'
         ))
-        st.plotly_chart(fig, use_container_width=True, key="chart_787")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
@@ -805,7 +814,7 @@ elif page == "Attendance & Payment":
             labels={'count': 'Number of Snapshots', 'Status': 'Label', 'trend_type': 'Trend'}
         )
         fig.update_traces(texttemplate='%{text}', textposition='outside')
-        st.plotly_chart(fig, use_container_width=True, key="chart_815")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_f:
         st.subheader("Consecutive Missed Lessons")
@@ -822,9 +831,11 @@ elif page == "Attendance & Payment":
         )
         fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
         fig.update_layout(showlegend=False)
-        st.plotly_chart(fig, use_container_width=True, key="chart_832")
+        st.plotly_chart(fig, use_container_width=True)
 
+# =============================================================
 # CORRELATION & FEATURES PAGE
+# =============================================================
 elif page == "Correlation & Features":
     st.title("Correlation & Feature Analysis")
     st.markdown("---")
@@ -864,10 +875,10 @@ elif page == "Correlation & Features":
             yaxis=dict(autorange='reversed'),
             height=500
         )
-        st.plotly_chart(fig_a, use_container_width=True, key="chart_876")
+        st.plotly_chart(fig_a, use_container_width=True, key="corr_col_a")
 
     with col_b:
-        st.subheader("Top 20 Features - Live Ranking")
+        st.subheader("Top 20 Features — Live Ranking")
         st.caption("Computed from snapshot training data (48,448 monthly observations).")
         target_corr = snap[num_cols + ['label']].corr()['label'].drop('label')
         target_corr_sorted = target_corr.reindex(
@@ -888,7 +899,7 @@ elif page == "Correlation & Features":
             yaxis=dict(autorange='reversed'),
             height=500
         )
-        st.plotly_chart(fig, use_container_width=True, key="chart_900")
+        st.plotly_chart(fig, use_container_width=True, key="corr_col_b")
 
     st.markdown("---")
     st.subheader("Full Correlation Heatmap")
@@ -914,7 +925,7 @@ elif page == "Correlation & Features":
         xaxis=dict(tickangle=-45),
         yaxis=dict(autorange='reversed'),
     )
-    st.plotly_chart(fig_hm, use_container_width=True, key="chart_926")
+    st.plotly_chart(fig_hm, use_container_width=True, key="corr_heatmap")
 
     st.markdown("---")
     st.subheader("Feature Averages by Label")
@@ -937,9 +948,9 @@ elif page == "Correlation & Features":
     if show_cols:
         stats = snap_display.groupby('Status')[show_cols].mean().T.round(3)
 
-        # I normalise each row to 0-1 relative to its own maximum so features
-        # on completely different scales - currentBalance measured in UZS versus
-        # attendanceRate between 0 and 1 - can appear side by side without one
+        # I normalise each row to 0–1 relative to its own maximum so features
+        # on completely different scales — currentBalance measured in UZS versus
+        # attendanceRate between 0 and 1 — can appear side by side without one
         # bar dwarfing all the others. I still print the actual mean values as
         # bar labels so the chart remains quantitatively honest.
         stats_norm = stats.copy()
@@ -976,26 +987,30 @@ elif page == "Correlation & Features":
             legend=dict(orientation='h', yanchor='bottom', y=1.02),
             margin=dict(t=40, b=80)
         )
-        st.plotly_chart(fig_avg, use_container_width=True, key="chart_988")
+        st.plotly_chart(fig_avg, use_container_width=True)
         st.caption("Bar heights are normalised per feature so different scales are "
                    "comparable. Actual mean values shown as labels above each bar.")
         st.dataframe(stats, use_container_width=True)
 
-# PREDICTIONS PAGE  (7th page - the moderator's one-click tool)
+# =============================================================
+# PREDICTIONS PAGE  (7th page — the moderator's one-click tool)
+# =============================================================
 # I designed this page as the core operational deliverable for
 # Registan's moderators. It loads the output written by predict.py
 # and presents each currently-active student's dropout probability
 # alongside top risk factors in plain language. A moderator can
 # filter to their own student list, sort by risk level, and download
-# the table as CSV - all without any knowledge of machine learning.
+# the table as CSV — all without any knowledge of machine learning.
 # The colour-coded risk column (red/amber/green) lets them scan the
 # table in seconds and decide who to call that day.
 elif page == "Predictions":
-    st.title("Dropout Predictions - Active Students")
+    st.title("Dropout Predictions — Active Students")
     st.caption("Probability each currently-active student stops attending next month, "
                "with the top risk factors driving each score.")
 
+    # ---------------------------------------------------------
     # load predictions + attach human-readable names
+    # ---------------------------------------------------------
     @st.cache_data
     def load_predictions():
         pred_path = PROCESSED / "predictions.parquet"
@@ -1035,8 +1050,8 @@ elif page == "Predictions":
 
     if pred is None:
         st.warning(
-            "No predictions found. Run the pipeline first:\n\n"
-            "`python3 run_historical_pipeline.py`"
+            "No predictions found. Run the model pipeline first:\n\n"
+            "`python3 src/models/train_models.py`  then  `python3 src/models/predict.py`"
         )
     else:
         # ---- summary metrics ---------------------------------
@@ -1054,7 +1069,7 @@ elif page == "Predictions":
                 st.session_state[k] = 'All'
             st.session_state['p_name'] = None
 
-        st.button("retry Reset filters", on_click=_reset_pred_filters, key='pred_reset')
+        st.button("↺ Reset filters", on_click=_reset_pred_filters, key='pred_reset')
 
         # ---- filters -----------------------------------------
         f1, f2, f3 = st.columns(3)
@@ -1085,7 +1100,7 @@ elif page == "Predictions":
                 color_discrete_map={'High': '#e74c3c', 'Medium': '#f39c12', 'Low': '#2ecc71'},
                 title="Risk distribution by course", labels={'n': 'Students', 'courseName': 'Course'}
             )
-            st.plotly_chart(fig, use_container_width=True, key="chart_1101")
+            st.plotly_chart(fig, use_container_width=True)
 
         # ---- ranked, colour-coded table ----------------------
         table = view.sort_values('dropout_probability', ascending=False)[[
@@ -1121,3 +1136,147 @@ elif page == "Predictions":
             mime="text/csv"
         )
 
+# =============================================================
+# LIVE PREDICTIONS PAGE
+# =============================================================
+elif page == "Live Predictions":
+    st.title("Live Predictions — Active Students")
+    st.caption(
+        "Dropout risk scores generated from **freshly pulled API data** (from 2026-03-19 onwards). "
+        "Run `python3 api_on_process/run_live_pipeline.py` to refresh."
+    )
+
+    live_path = PROCESSED / "live_predictions.parquet"
+
+    if not live_path.exists():
+        st.warning(
+            "No live predictions found yet.\n\n"
+            "To generate them, run in your terminal:\n\n"
+            "```\ncd dissertation_final\n"
+            "python3 api_on_process/run_live_pipeline.py\n```\n\n"
+            "This fetches fresh data from the API, cleans it, runs feature engineering, "
+            "and scores active students with the trained model."
+        )
+    else:
+        @st.cache_data
+        def load_live_predictions():
+            pred = pd.read_parquet(live_path)
+
+            # Names are pre-enriched by predict_live.py (live_interim + original interim).
+            # If the file was generated by an older pipeline run without enrichment,
+            # fall back to merging from original interim + master_full as before.
+            if 'studentName' not in pred.columns:
+                names_path = PROCESSED / "student_names.parquet"
+                if names_path.exists():
+                    stu = pd.read_parquet(names_path)
+                    pred = pred.merge(
+                        stu[['studentId', 'fullName']].rename(columns={'fullName': 'studentName'}),
+                        on='studentId', how='left'
+                    )
+                elif Path(STUDENTS_CLEAN).exists():
+                    stu = pd.read_parquet(STUDENTS_CLEAN)
+                    pred = pred.merge(
+                        stu[['studentId', 'fullName']].rename(columns={'fullName': 'studentName'}),
+                        on='studentId', how='left'
+                    )
+                else:
+                    pred['studentName'] = pred['studentId']
+                ctx = full[['studentId', 'courseName', 'lastTeacherName', 'lastModeratorName']].drop_duplicates(
+                    ['studentId', 'courseName']
+                )
+                pred = pred.merge(ctx, on=['studentId', 'courseName'], how='left')
+
+            # ensure all display columns exist and have no nulls
+            pred['studentName']       = pred.get('studentName',       pd.Series('Unknown', index=pred.index)).fillna('Unknown')
+            pred['lastTeacherName']   = pred.get('lastTeacherName',   pd.Series('Unknown', index=pred.index)).fillna('Unknown')
+            pred['lastModeratorName'] = pred.get('lastModeratorName', pd.Series('Unknown', index=pred.index)).fillna('Unknown')
+            return pred
+
+        live = load_live_predictions()
+
+        # ---- retrieved timestamp ----------------------------
+        if 'retrievedAt' in live.columns:
+            retrieved = live['retrievedAt'].iloc[0]
+            st.info(f"Data retrieved at: **{retrieved}**")
+
+        # ---- summary metrics --------------------------------
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Active students",       f"{len(live):,}")
+        c2.metric("High risk (>70%)",      int((live['risk_level'] == 'High').sum()))
+        c3.metric("Medium risk (40-70%)",  int((live['risk_level'] == 'Medium').sum()))
+        c4.metric("Low risk (<40%)",       int((live['risk_level'] == 'Low').sum()))
+
+        st.markdown("---")
+
+        # ---- reset button -----------------------------------
+        def _reset_live_filters():
+            for k in ['lv_risk', 'lv_course', 'lv_mod']:
+                st.session_state[k] = 'All'
+            st.session_state['lv_name'] = None
+
+        st.button("↺ Reset filters", on_click=_reset_live_filters, key='live_reset')
+
+        # ---- filters ----------------------------------------
+        f1, f2, f3 = st.columns(3)
+        risk_opts   = ['All', 'High', 'Medium', 'Low']
+        course_opts = ['All'] + sorted(live['courseName'].dropna().unique().tolist())
+        mod_opts    = ['All'] + sorted(live['lastModeratorName'].dropna().unique().tolist())
+
+        sel_risk    = f1.selectbox("Risk level",              risk_opts,   key='lv_risk')
+        sel_course  = f2.selectbox("Course",                  course_opts, key='lv_course')
+        sel_mod     = f3.selectbox("My students (moderator)", mod_opts,    key='lv_mod')
+
+        name_opts = sorted(live['studentName'].dropna().unique().tolist())
+        sel_name  = st.selectbox("Search by student name", name_opts, key='lv_name', index=None, placeholder="Type a name...")
+
+        view = live.copy()
+        if sel_risk   != 'All': view = view[view['risk_level']        == sel_risk]
+        if sel_course != 'All': view = view[view['courseName']        == sel_course]
+        if sel_mod    != 'All': view = view[view['lastModeratorName'] == sel_mod]
+        if sel_name   is not None: view = view[view['studentName']    == sel_name]
+
+        st.caption(f"Showing {len(view):,} of {len(live):,} active students")
+
+        # ---- risk distribution by course --------------------
+        if len(view) > 0:
+            dist = view.groupby(['courseName', 'risk_level']).size().reset_index(name='n')
+            fig = px.bar(
+                dist, x='courseName', y='n', color='risk_level',
+                color_discrete_map={'High': '#e74c3c', 'Medium': '#f39c12', 'Low': '#2ecc71'},
+                title="Risk distribution by course",
+                labels={'n': 'Students', 'courseName': 'Course'}
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        # ---- ranked table -----------------------------------
+        def colour_risk(val):
+            return {
+                'High':   'background-color: #e74c3c; color: white',
+                'Medium': 'background-color: #f39c12; color: white',
+                'Low':    'background-color: #2ecc71; color: white',
+            }.get(val, '')
+
+        table = view.sort_values('dropout_probability', ascending=False)[[
+            'studentName', 'courseName',
+            'dropout_probability', 'risk_level', 'topFactors',
+            'lastTeacherName', 'lastModeratorName'
+        ]].rename(columns={
+            'studentName': 'Student',
+            'courseName': 'Course', 'dropout_probability': 'Risk %',
+            'risk_level': 'Risk', 'topFactors': 'Top Factors',
+            'lastTeacherName': 'Teacher', 'lastModeratorName': 'Moderator'
+        }).reset_index(drop=True)
+        table['Risk %'] = (table['Risk %'] * 100).round(1)
+
+        st.dataframe(
+            table.style.map(colour_risk, subset=['Risk'])
+                       .format({'Risk %': '{:.1f}'}),
+            use_container_width=True, height=480
+        )
+
+        st.download_button(
+            "Download live predictions as CSV",
+            data=table.to_csv(index=False).encode('utf-8'),
+            file_name="live_predictions.csv",
+            mime="text/csv"
+        )
